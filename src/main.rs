@@ -1,12 +1,10 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 use cursive::{
     event::Key,
-    logger::{self, Record},
     traits::Nameable,
     views::{self, Dialog, PaddedView, SelectView, StackView},
-    Cursive,
 };
 use serde::Deserialize;
 
@@ -104,6 +102,8 @@ fn run(dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
             let mut list_view = SelectView::new();
             let subs = res.sub.subs;
 
+            siv.set_user_data(dir);
+
             for sub in subs {
                 list_view.add_item(
                     format!(
@@ -145,11 +145,12 @@ fn run(dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
                             // s.add_layer(Dialog::info(format!("get detail, dir {:?}", dir)));
                             let (filename, url) = item;
                             let res = reqwest::blocking::get(url).and_then(|r| r.text());
-                            s.add_layer(match res {
+                            let info = match res {
                                 Err(e) => Dialog::info(format!("Download {} failed {:?}", url, e)),
                                 Ok(text) => {
-                                    let path = filename;
-                                    match std::fs::write(path, text) {
+                                    let dir = s.user_data::<PathBuf>().unwrap();
+                                    let path = dir.join(filename);
+                                    match std::fs::write(&path, text) {
                                         Err(e) => Dialog::info(format!(
                                             "Write to {:?} failed {:?}",
                                             path, e
@@ -160,7 +161,8 @@ fn run(dir: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
                                         )),
                                     }
                                 }
-                            });
+                            };
+                            s.add_layer(info);
                         });
                         s.call_on_name("stack", |view: &mut views::StackView| {
                             view.add_layer(PaddedView::lrtb(2, 2, 1, 1, detail_view));

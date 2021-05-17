@@ -997,7 +997,6 @@ dependencies = [
  "cursive",
  "reqwest",
  "serde",
- "serde_json",
  "structopt",
 ]
 
